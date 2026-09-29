@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://amebo.example/schemas/intake-row.v1.json",
+  "title": "Amebo intake CSV row (v1)",
+  "description": "One row of the intake CSV, keyed by exact column header. Mirrors src/core/ingest/parseIntakeCsv.ts and normalize.ts. All 15 columns must be present in the header (a missing column aborts the batch); cells may be empty unless marked required. Rows failing a 'required' rule are reported as row errors and skipped, other rows still ingest. Extra columns are ignored.",
+  "type": "object",
+  "required": [
+    "Timestamp", "Email Address", "Startup name", "Founder full name",
+    "Country of operation", "Sector", "Stage", "Describe what your company does",
+    "Monthly revenue (USD)", "Is your revenue recurring?", "Team size",
+    "Have you raised external funding?", "What makes your business scalable?",
+    "Pitch deck file", "Decision"
+  ],
+  "properties": {
+    "Timestamp": {
+      "type": "string",
+      "description": "Submission time, set automatically by Google Forms. Stored as text, not parsed."
+    },
+    "Email Address": {
+      "type": "string", "minLength": 1, "format": "email",
+      "description": "REQUIRED (row error if blank). Collected by the form setting, not a question. With 'Startup name' forms the duplicate key (case-insensitive); later duplicates are rejected."
+    },
+    "Startup name": {
+      "type": "string", "minLength": 1,
+      "description": "REQUIRED (row error if blank)."
+    },
+    "Founder full name": {
+      "type": "string", "minLength": 1,
+      "description": "REQUIRED (row error if blank)."
+    },
+    "Country of operation": {
+      "type": "string",
+      "description": "Free text. Checked against the cycle mandate's geographies by the classifier, not by exact match."
+    },
+    "Sector": {
+      "type": "string",
+      "description": "Free text. Checked against the cycle mandate's sectors by the classifier."
+    },
+    "Stage": {
+      "type": "string",
+      "enum": ["Idea", "Pre-seed", "Pre seed", "Preseed", "Seed", "Revenue", ""],
+      "description": "Case-insensitive. Normalised to idea | pre_seed | seed | revenue. Any other value (e.g. 'Series A') becomes 'other', not an error."
+    },
+    "Describe what your company does": {
+      "type": "string",
+      "description": "Free text; the classifier's primary evidence. Treated as data, never as instructions."
+    },
+    "Monthly revenue (USD)": {
+      "type": "string",
+      "pattern": "^(\\s*|n/a|na|none|-|[₦N$]?[0-9][0-9,]*(\\.[0-9]+)?)$",
+      "description": "Plain number = USD. '$' prefix = USD, '₦' or 'N' prefix = NGN (no FX conversion). Commas allowed. Blank/n/a/none/- = unknown. Anything else (e.g. '4.2k', 'USD 4200') is kept as raw text with amount = null, not an error."
+    },
+    "Is your revenue recurring?": {
+      "type": "string",
+      "enum": ["Yes", "No", "Partially", "Partial", ""],
+      "description": "Case-insensitive. Normalised to yes | no | partial; anything else becomes 'unknown'."
+    },
+    "Team size": {
+      "type": "string",
+      "pattern": "^(\\s*|[0-9]+)$",
+      "description": "Digits only. Anything else (e.g. '5-10') is stored as null, not an error."
+    },
+    "Have you raised external funding?": {
+      "type": "string",
+      "description": "Free text, e.g. 'No' or 'Yes - $150k angel'."
+    },
+    "What makes your business scalable?": {
+      "type": "string",
+      "description": "Free text; key evidence for the venture-scalability criterion (SME vs startup)."
+    },
+    "Pitch deck file": {
+      "type": "string",
+      "description": "Path or name of the deck. Only the part after the last '/' is used, and it must equal the file name of a PDF uploaded alongside the CSV (e.g. 'decks/paylink_deck.pdf' matches 'paylink_deck.pdf'). Blank = no deck."
+    },
+    "Decision": {
+      "type": "string",
+      "description": "Not a form question: the column must exist but is usually blank for a new cycle. For past, labelled cycles, 'Accepted'/'Interviewed' = keep and 'Rejected…' = filter (used by the internal comparison tool only)."
+    }
+  },
+  "additionalProperties": true
+}
